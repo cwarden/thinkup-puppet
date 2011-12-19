@@ -25,6 +25,7 @@ class thinkup::server($webserver = 'apache', $port = 80) {
   }
   Package { ensure => latest }
   package {
+    'php5':;
     'php5-mysql':;
     'php5-curl':;
     'php5-gd':;
@@ -35,8 +36,8 @@ class thinkup::server($webserver = 'apache', $port = 80) {
       Class['Apache::Php'] -> Package['thinkup']
       class {
         'apache':
-          require => Package['php5-mysql', 'php5-curl', 'php5-gd'],
-          subscribe => Package['php5-mysql', 'php5-curl', 'php5-gd'];
+          require => Package['php5', 'php5-mysql', 'php5-curl', 'php5-gd'],
+          subscribe => Package['php5', 'php5-mysql', 'php5-curl', 'php5-gd'];
         'apache::php':;
         }
       apache::vhost { 'thinkup':
@@ -100,7 +101,7 @@ class thinkup::server($webserver = 'apache', $port = 80) {
 }
 
 class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destination_port) {
-  class { 'nginx': }
+  include nginx
   nginx::resource::upstream { 'thinkup':
     ensure  => present,
     members => [
