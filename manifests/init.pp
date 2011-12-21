@@ -19,11 +19,17 @@ class thinkup::server($webserver = 'apache', $port = 80) {
   $timezone = $thinkup::config::timezone
 
   include mysql
-  file { "thinkup_1.0_all.deb":
-    path   => "/var/cache/apt/archives/thinkup_1.0_all.deb",
-    source => "puppet:///modules/thinkup/thinkup_1.0_all.deb",
+  if !defined(Apt::Source['swellpath']) {
+    apt::source { "swellpath":
+      location    => "http://swdeb.s3.amazonaws.com",
+      release     => "swellpath",
+      repos       => "main",
+      key         => "4EF797A0",
+      key_server  => "subkeys.pgp.net",
+      include_src => false,
+    }
   }
-  Package { ensure => latest }
+  Package { ensure => latest, require => Apt::Source['swellpath'] }
   package {
     'php5':;
     'php5-mysql':;
@@ -61,10 +67,7 @@ class thinkup::server($webserver = 'apache', $port = 80) {
   }
 
   package { "thinkup":
-    ensure  => "present",
-    provider => "dpkg",
-    source  => '/var/cache/apt/archives/thinkup_1.0_all.deb',
-    require => [File['thinkup_1.0_all.deb'], Package['php5-mysql']],
+    ensure  => "latest",
   }
 
   file { "/var/www/thinkup/_lib/view/compiled_view/":
