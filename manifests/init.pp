@@ -101,6 +101,19 @@ class thinkup::server($webserver = 'apache', $port = 80) {
     content => template('thinkup/config.inc.php'),
     require => Package['thinkup']
   }
+
+  include concat::setup
+  $crawler_cron = '/etc/cron.hourly/thinkup_crawler'
+  concat::fragment { "${crawler_cron}-header}":
+    target  => $crawler_cron,
+    content => "#!/bin/sh\n",
+    order   => '01',
+  }
+  concat { $crawler_cron:
+    owner => 'root',
+    group => 'root',
+    mode  => 700,
+  }
 }
 
 class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destination_port) {
@@ -111,7 +124,7 @@ class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destin
       "${destination_host}:${destination_port}"
     ],
   }
-  nginx::resource::vhost { "${listen_host}:${listen_port}":
+  nginx::resource::vhost { "${listen_host}":
     listen_port => $listen_port,
     ensure   => present,
     proxy  => 'http://thinkup',
@@ -170,19 +183,22 @@ class thinkup::database($type = 'mysql', $admin_password) {
 
 define thinkup::user($fullname = $title, $email, $password, $admin = 0) {
   Class['thinkup::server::database_tables'] -> Thinkup::User[$title]
+  Class['thinkup::proxy'] -> Thinkup::User[$title]
 
   Exec {
     path => [ '/usr/local/bin', '/usr/bin', '/bin' ]
   }
 
+  $api_key = inline_template("<% require 'digest'; api_key = Digest::MD5.hexdigest('${email}' + '${password}'); %><%= api_key -%>")
+
   # creates a file containing sql to populate owner record, then execs mysql client
   # use generally-static salt so the template doesn't return different content on each run
   $sql_tmpl = "<% require 'digest';
     salt = Digest::SHA256.hexdigest('${thinkup::config::password_salt}' + '${email}');
-    pass = Digest::SHA256.hexdigest('${password}' + salt) %>
-    INSERT INTO tu_owners (`full_name`, `email`, `pwd`, `pwd_salt`, `is_activated`, `is_admin`)
-    VALUES ('${fullname}', '${email}', '<%= pass -%>', '<%= salt -%>', 1, ${admin})
-    ON DUPLICATE KEY UPDATE full_name = '${fullname}', pwd = '<%= pass -%>', pwd_salt = '<%= salt -%>', is_activated = 1, is_admin = ${admin};"
+    pass = Digest::SHA256.hexdigest('${password}' + salt); %>
+    INSERT INTO tu_owners (`full_name`, `email`, `pwd`, `pwd_salt`, `is_activated`, `api_key`, `is_admin`)
+    VALUES ('${fullname}', '${email}', '<%= pass -%>', '<%= salt -%>', 1, '<%= api_key -%>', ${admin})
+    ON DUPLICATE KEY UPDATE full_name = '${fullname}', pwd = '<%= pass -%>', pwd_salt = '<%= salt -%>', is_activated = 1, api_key = '<%= api_key -%>', is_admin = ${admin};"
   $sql = inline_template($sql_tmpl)
   $sql_file = md5($sql)
   $sql_path = "/var/www/thinkup/tmp/${sql_file}"
@@ -196,5 +212,58 @@ define thinkup::user($fullname = $title, $email, $password, $admin = 0) {
     command => "mysql -h ${thinkup::config::database_host} -u${thinkup::config::database_user} -p${thinkup::config::database_password} ${thinkup::config::database} < ${sql_path}",
     refreshonly => true,
     subscribe => File[$sql_path]
+  }
+
+  $crawler_cron = '/etc/cron.hourly/thinkup_crawler'
+  concat::fragment { "thinkup_crawler-${email}":
+    target  => $crawler_cron,
+    content => "/usr/bin/curl 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/rss.php?un=${email}&as=${api_key}'\n"
+  }
+
+}
+
+class thinkup::plugins::facebook($app_id, $app_secret) {
+  Class['thinkup::server::database_tables'] -> Class['thinkup::plugins::facebook']
+  $sql = '/var/www/thinkup/tmp/configure-facebook.sql'
+  $sql_tmpl = "REPLACE INTO tu_options SET namespace = 'plugin_options-2', option_name = 'facebook_app_id', option_value = '${app_id}', last_updated = NOW(), created = NOW();
+    REPLACE INTO tu_options SET namespace = 'plugin_options-2', option_name = 'facebook_api_secret', option_value = '${app_secret}', last_updated = NOW(), created = NOW();"
+  file { $sql:
+    ensure => present,
+    content => $sql_tmpl
+  }
+
+  Exec {
+    path    => [ '/usr/local/bin', '/usr/bin', '/bin' ],
+  }
+
+  $mysql = "mysql -h${thinkup::config::database_host} -u${thinkup::config::database_user} -p${thinkup::config::database_password} ${thinkup::config::database}"
+  exec {
+    "configure facebook plugin":
+      command     => "${mysql} < ${sql}",
+      refreshonly => true,
+      subscribe   => File[$sql];
+  }
+}
+
+class thinkup::plugins::twitter($oauth_consumer_key, $oauth_consumer_secret) {
+  Class['thinkup::server::database_tables'] -> Class['thinkup::plugins::twitter']
+  $sql = '/var/www/thinkup/tmp/configure-twitter.sql'
+  $sql_tmpl = "REPLACE INTO tu_options SET namespace = 'plugin_options-1', option_name = 'oauth_consumer_key', option_value = '${oauth_consumer_key}', last_updated = NOW(), created = NOW();
+    REPLACE INTO tu_options SET namespace = 'plugin_options-1', option_name = 'oauth_consumer_secret', option_value = '${oauth_consumer_secret}', last_updated = NOW(), created = NOW();"
+  file { $sql:
+    ensure => present,
+    content => $sql_tmpl
+  }
+
+  Exec {
+    path    => [ '/usr/local/bin', '/usr/bin', '/bin' ],
+  }
+
+  $mysql = "mysql -h${thinkup::config::database_host} -u${thinkup::config::database_user} -p${thinkup::config::database_password} ${thinkup::config::database}"
+  exec {
+    "configure twitter plugin":
+      command     => "${mysql} < ${sql}",
+      refreshonly => true,
+      subscribe   => File[$sql];
   }
 }
