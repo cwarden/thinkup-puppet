@@ -176,6 +176,8 @@ class thinkup::database($type = 'mysql', $admin_password) {
         grant    => ['all'],
       }
 
+      include mysql::timezone
+
     }
     default: { fail("Unrecognized database type") }
   }
