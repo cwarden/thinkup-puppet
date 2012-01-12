@@ -41,16 +41,16 @@ $THINKUP_CFG['table_prefix']              = 'tu_';
 /************************************************/
 
 // Full server path to crawler.log.
-$THINKUP_CFG['log_location']              = dirname(__FILE__) . '/../logs/crawler.log';
+$THINKUP_CFG['log_location']              = dirname(__FILE__) . '/logs/crawler.log';
 
 // Verbosity of log. 0 is everything, 1 is user messages, 2 is errors only
 $THINKUP_CFG['log_verbosity']             = 0;
 
 // Full server path to stream processor log.
-$THINKUP_CFG['stream_log_location']       = dirname(__FILE__) . '/../logs/stream.log';
+$THINKUP_CFG['stream_log_location']       = dirname(__FILE__) . '/logs/stream.log';
 
 // Full server path to sql.log. To not log queries, set to null.
-$THINKUP_CFG['sql_log_location']          = dirname(__FILE__) . '/../logs/sql.log';
+$THINKUP_CFG['sql_log_location']          = dirname(__FILE__) . '/logs/sql.log';
 
 // How many seconds does a query take before it gets logged as a slow query?
 $THINKUP_CFG['slow_query_log_threshold']  = 2.0;
