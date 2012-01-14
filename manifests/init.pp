@@ -67,7 +67,7 @@ class thinkup::server($webserver = 'apache', $port = 80) {
   }
 
   package { "thinkup":
-    ensure  => "latest",
+    ensure  => "1.0-swellpath-0.2",
   }
 
   file { "/var/www/thinkup/_lib/view/compiled_view/":
@@ -125,9 +125,10 @@ class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destin
     ],
   }
   nginx::resource::vhost { "${listen_host}":
-    listen_port => $listen_port,
-    ensure   => present,
-    proxy  => 'http://thinkup',
+    listen_port        => $listen_port,
+    ensure             => present,
+    proxy              => 'http://thinkup',
+    proxy_read_timeout => 1800,
   }
 }
 
@@ -144,12 +145,17 @@ class thinkup::server::database_tables {
   }
 
   $mysql = "mysql -h${thinkup::config::database_host} -u${thinkup::config::database_user} -p${thinkup::config::database_password} ${thinkup::config::database}"
-  exec {
-    "import thinkup":
+  exec { "import thinkup":
       command     => "${mysql} < ${create_sql}",
       #unless     => "echo 'SHOW TABLES' | ${mysql} | grep -q instances",
       refreshonly => true,
-      subscribe   => File[$create_sql];
+      subscribe   => File[$create_sql],
+      before      => Exec['add tu_posts.last_updated']
+  }
+
+  exec { "add tu_posts.last_updated":
+      command => "echo 'ALTER TABLE tu_posts ADD last_updated TIMESTAMP; UPDATE tu_posts SET last_updated = NOW();' | ${mysql}",
+      unless  => "echo 'SHOW COLUMNS FROM tu_posts LIKE \"last_updated\";' | ${mysql} | grep -q last_updated",
   }
 }
 
