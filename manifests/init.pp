@@ -225,7 +225,7 @@ define thinkup::user($fullname = $title, $email, $password, $admin = 0) {
   $crawler_cron = '/etc/cron.hourly/thinkup_crawler'
   concat::fragment { "thinkup_crawler-${email}":
     target  => $crawler_cron,
-    content => "/usr/bin/curl 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/rss.php?un=${email}&as=${api_key}'\n"
+    content => "/usr/bin/curl 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}'\n"
   }
 
 }
