@@ -67,7 +67,7 @@ class thinkup::server($webserver = 'apache', $port = 80) {
   }
 
   package { "thinkup":
-    ensure  => "1.0-swellpath-0.2",
+    ensure  => '1.0-swellpath-20120122',
   }
 
   file { "/var/www/thinkup/_lib/view/compiled_view/":
