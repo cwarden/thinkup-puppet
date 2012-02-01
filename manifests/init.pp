@@ -128,7 +128,7 @@ class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destin
     listen_port        => $listen_port,
     ensure             => present,
     proxy              => 'http://thinkup',
-    proxy_read_timeout => 1800,
+    proxy_read_timeout => 3600,
   }
 }
 
@@ -189,7 +189,7 @@ class thinkup::database($type = 'mysql', $admin_password) {
   }
 }
 
-define thinkup::user($fullname = $title, $email, $password, $admin = 0) {
+define thinkup::user($fullname = $title, $email, $password, $admin = 0, $crawl_automatically = true) {
   Class['thinkup::server::database_tables'] -> Thinkup::User[$title]
   Class['thinkup::proxy'] -> Thinkup::User[$title]
 
@@ -223,9 +223,11 @@ define thinkup::user($fullname = $title, $email, $password, $admin = 0) {
   }
 
   $crawler_cron = '/etc/cron.hourly/thinkup_crawler'
-  concat::fragment { "thinkup_crawler-${email}":
-    target  => $crawler_cron,
-    content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}'\n"
+  if $crawl_automatically {
+    concat::fragment { "thinkup_crawler-${email}":
+      target  => $crawler_cron,
+      content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}'\n"
+    }
   }
 
 }
