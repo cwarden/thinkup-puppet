@@ -230,7 +230,7 @@ define thinkup::user($fullname = $title, $email, $password, $admin = 0, $crawl_a
   if $crawl_automatically {
     concat::fragment { "thinkup_crawler-${email}":
       target  => $crawler_cron,
-      content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}'\n"
+      content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}' | grep -v '{\"result\":\"success\"}'\n"
     }
   }
 
