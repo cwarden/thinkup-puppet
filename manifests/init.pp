@@ -78,13 +78,26 @@ class thinkup::server($webserver = 'apache', $port = 80) {
     require => Package['thinkup']
   }
 
-  file { "/var/www/thinkup/logs/":
-    ensure  => directory,
-    mode    => 700,
-    recurse => true,
-    owner   => "www-data",
-    group   => "www-data",
-    require => Package['thinkup']
+  # TODO: move this into the debian package
+  file { "/etc/logrotate.d/thinkup":
+    ensure  => file,
+    mode    => 644,
+    owner   => 'root',
+    group   => 'root',
+    source  => 'puppet:///modules/thinkup/logrotate.conf',
+  }
+
+  file {
+     "/var/log/thinkup/":
+      ensure  => directory,
+      mode    => 700,
+      recurse => true,
+      owner   => "www-data",
+      group   => "www-data",
+      require => Package['thinkup'];
+    "/var/www/thinkup/logs/":
+      ensure => absent,
+      force  => true;
   }
 
   file { "/var/www/thinkup/tmp/":
@@ -230,7 +243,7 @@ define thinkup::user($fullname = $title, $email, $password, $admin = 0, $crawl_a
   if $crawl_automatically {
     concat::fragment { "thinkup_crawler-${email}":
       target  => $crawler_cron,
-      content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}' | grep -v '{\"result\":\"success\"}'\n"
+      content => "/usr/bin/curl --silent 'http://${thinkup::proxy::listen_host}:${thinkup::proxy::listen_port}/crawler/run.php?un=${email}&as=${api_key}' | { grep -v '{\"result\":\"success\"}' || true; }\n"
     }
   }
 
