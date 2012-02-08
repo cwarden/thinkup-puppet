@@ -11,7 +11,7 @@ class thinkup::config(
   $password_salt
 ) { }
 
-class thinkup::server($webserver = 'apache', $port = 80) {
+class thinkup::server($webserver = 'apache', $port = 80, $site_root_path = '/') {
   $database_host = $thinkup::config::database_host
   $database_user = $thinkup::config::database_user
   $database_password = $thinkup::config::database_password
@@ -140,7 +140,7 @@ class thinkup::proxy($listen_host, $listen_port = 80, $destination_host, $destin
   nginx::resource::vhost { "${listen_host}":
     listen_port        => $listen_port,
     ensure             => present,
-    proxy              => 'http://thinkup',
+    proxy              => 'http://thinkup/',
     proxy_read_timeout => 3600,
   }
 }

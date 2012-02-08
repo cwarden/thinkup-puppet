@@ -8,7 +8,7 @@ $THINKUP_CFG['app_title']                 = 'ThinkUp';
 
 // Public path of thinkup's /webapp/ folder on your web server.
 // For example, if the /webapp/ folder is located at http://yourdomain/thinkup/, set to '/thinkup/'.
-$THINKUP_CFG['site_root_path']            = '/';
+$THINKUP_CFG['site_root_path']            = '<%= site_root_path -%>';
 
 // Full server path to /thinkup/ folder.
 $THINKUP_CFG['source_root_path']          = realpath(dirname(__FILE__)) . '/';
