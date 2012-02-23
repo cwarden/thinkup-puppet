@@ -13,6 +13,9 @@ $THINKUP_CFG['site_root_path']            = '<%= site_root_path -%>';
 // Full server path to /thinkup/ folder.
 $THINKUP_CFG['source_root_path']          = realpath(dirname(__FILE__)) . '/';
 
+// Cache file directory
+$THINKUP_CFG['datadir_path']              = '/var/run/thinkup';
+
 // Your timezone
 $THINKUP_CFG['timezone']                  = '<%= timezone -%>';
 
