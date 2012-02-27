@@ -113,7 +113,12 @@ class thinkup::server($webserver = 'apache', $port = 80, $site_root_path = '/') 
   }
 
   include concat::setup
-  $crawler_cron = '/etc/cron.hourly/thinkup_crawler'
+  # old location of cron script
+  file { '/etc/cron.hourly/thinkup_crawler':
+    ensure => absent
+  }
+
+  $crawler_cron = '/var/run/thinkup/thinkup_crawler'
   concat::fragment { "${crawler_cron}-header}":
     target  => $crawler_cron,
     content => "#!/bin/sh\n",
@@ -123,5 +128,12 @@ class thinkup::server($webserver = 'apache', $port = 80, $site_root_path = '/') 
     owner => 'root',
     group => 'root',
     mode  => 700,
+  }
+
+  cron { 'run thinkup crawler':
+    user    => root,
+    command => $crawler_cron,
+    hour    => '*/4',
+    minute  => fqdn_rand(59, 4),
   }
 }
